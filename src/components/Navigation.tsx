@@ -70,8 +70,7 @@ export default function Navigation() {
               onClick={() => handleNavClick('/')}
             >
               <img 
-                src="https://res.cloudinary.com/softcraft/image/upload/v1737831123/SACRED_LOGO_034534_dbedwe.png" 
-                alt="Church Logo" 
+                src="/favicon.png" 
                 className="h-8 w-8 rounded-full"
               />
               <span className="font-bold text-xl text-gray-900">Idasa Model Parish</span>
