@@ -19,6 +19,8 @@ export default function LiveStream() {
   const [showChat, setShowChat] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [playing, setPlaying] = useState(true);
+  const [isMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
     fetchStreams();
@@ -40,6 +42,10 @@ export default function LiveStream() {
 
       const streamsMap: Record<string, Stream> = {};
       data?.forEach((stream: Stream) => {
+        // Convert YouTube URLs to embed URLs for mobile compatibility
+        if (stream.url.includes('youtube.com/watch?v=')) {
+          stream.url = stream.url.replace('watch?v=', 'embed/');
+        }
         streamsMap[stream.id] = stream;
       });
 
@@ -131,8 +137,6 @@ export default function LiveStream() {
     );
   }
 
-  const currentStream = streams[activeStream];
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -143,7 +147,7 @@ export default function LiveStream() {
               {/* Stream Controls */}
               <div className="border-b p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                  <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                  <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
                     {Object.values(streams).map((stream) => (
                       <button
                         key={stream.id}
@@ -159,20 +163,21 @@ export default function LiveStream() {
                     ))}
                   </div>
                   <div className="flex items-center justify-end space-x-4 text-gray-600">
-                    <button className="p-2 hover:text-indigo-600">
+                    {streams[activeStream]?.name === 'FM Mode' ? (
                       <Volume2 className="h-5 w-5" />
-                    </button>
-                    <button 
-                      className="p-2 hover:text-indigo-600 relative"
-                      onClick={() => setShowShare(!showShare)}
-                      data-share-button
-                    >
-                      <Share2 className="h-5 w-5" />
-                    </button>
-                    {showShare && (
-                      <div data-share-menu>
-                        {handleShare()}
-                      </div>
+                    ) : (
+                      <>
+                        <button className="p-2 hover:text-indigo-600">
+                          <Volume2 className="h-5 w-5" />
+                        </button>
+                        <button 
+                          className="p-2 hover:text-indigo-600 relative"
+                          onClick={() => setShowShare(!showShare)}
+                          data-share-button
+                        >
+                          <Share2 className="h-5 w-5" />
+                        </button>
+                      </>
                     )}
                     <button 
                       className="p-2 hover:text-red-600"
@@ -191,24 +196,45 @@ export default function LiveStream() {
                 </div>
               </div>
 
-              {/* Video Player */}
+              {/* Video/Audio Player */}
               <div className="relative w-full h-0 pb-[56.25%] bg-black">
                 <div className="absolute inset-0">
-                  <ReactPlayer
-                    url={currentStream.url}
-                    width="100%"
-                    height="100%"
-                    controls
-                    playing
-                    playsinline
-                  />
+                  {streams[activeStream]?.name === 'FM Mode' ? (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600">
+                      <audio
+                        src={streams[activeStream]?.url}
+                        controls
+                        autoPlay={playing}
+                        className="w-3/4 max-w-md"
+                        playsInline
+                      />
+                    </div>
+                  ) : (
+                    <ReactPlayer
+                      url={streams[activeStream]?.url}
+                      width="100%"
+                      height="100%"
+                      controls
+                      playing={playing}
+                      playsinline
+                      config={{
+                        youtube: {
+                          playerVars: {
+                            playsinline: 1,
+                            modestbranding: 1,
+                            origin: window.location.origin
+                          }
+                        }
+                      }}
+                    />
+                  )}
                 </div>
               </div>
               
               {/* Stream Info */}
               <div className="p-6">
-                <h2 className="text-2xl font-semibold mb-2">{currentStream.name}</h2>
-                <p className="text-gray-600 mb-6">{currentStream.description}</p>
+                <h2 className="text-2xl font-semibold mb-2">{streams[activeStream]?.name}</h2>
+                <p className="text-gray-600 mb-6">{streams[activeStream]?.description}</p>
                 
                 <div className="border-t pt-6">
                   <h3 className="font-semibold mb-4">Service Times:</h3>
@@ -231,20 +257,17 @@ export default function LiveStream() {
 
           {/* Live Chat */}
           {showChat && activeStream && (
-            <div className="fixed inset-x-0 bottom-0 lg:relative lg:w-96 z-50 lg:z-0">
-              <div className="bg-white shadow-lg lg:shadow-md h-[70vh] lg:h-[600px] flex flex-col rounded-t-xl lg:rounded-lg">
-                <div className="p-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Live Chat</h3>
-                    <button 
-                      onClick={() => setShowChat(false)}
-                      className="lg:hidden p-2"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
+            <div className="fixed inset-x-0 bottom-0 lg:relative lg:w-96 z-50 lg:z-0 h-[70vh] lg:h-auto">
+              <div className="bg-white shadow-lg lg:shadow-md h-full lg:h-[600px] flex flex-col rounded-t-xl lg:rounded-lg">
+                <div className="p-4 border-b flex items-center justify-between">
+                  <h3 className="font-semibold">Live Chat</h3>
+                  <button 
+                    onClick={() => setShowChat(false)}
+                    className="lg:hidden p-2 hover:text-gray-600"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-
                 <LiveChat streamId={activeStream} />
               </div>
             </div>
